@@ -1,7 +1,6 @@
 Attribute VB_Name = "m000_EntryPoints"
 Option Explicit
 
-
 '-------------------------------------------------------------------------------------------------------------------
 '       General notes
 '-------------------------------------------------------------------------------------------------------------------
@@ -45,6 +44,8 @@ Sub GenerateSpreadsheet()
         wkb.Sheets(1).Delete
     Loop
     
+    
+    CreateWorksheetMedataPowerQuery wkb.Sheets(1), sFolderPath
     InsertIndexPage ActiveWorkbook
     
         
@@ -128,7 +129,7 @@ End Sub
 
 
 
-Function SheetLevelRangeNameExists(sht As Worksheet, ByRef sRangeName As String)
+Private Function SheetLevelRangeNameExists(sht As Worksheet, ByRef sRangeName As String)
 'Returns TRUE if sheet level scoped range name exists
 
     Dim sTest As String
@@ -142,7 +143,7 @@ Function SheetLevelRangeNameExists(sht As Worksheet, ByRef sRangeName As String)
 End Function
 
 
-Sub FormatSheet(ByRef sht As Worksheet)
+Private Sub FormatSheet(ByRef sht As Worksheet)
 'Applies my preferred sheet formattting
 
     sht.Activate
@@ -180,7 +181,7 @@ End Sub
 
 
 
-Sub InsertIndexPage(ByRef wkb As Workbook)
+Private Sub InsertIndexPage(ByRef wkb As Workbook)
 
     Dim sht As Worksheet
     Dim shtIndex As Worksheet
@@ -264,6 +265,51 @@ Sub InsertIndexPage(ByRef wkb As Workbook)
 
 End Sub
 
+
+
+Private Sub CreateWorksheetMedataPowerQuery(ByVal sht As Worksheet, ByVal sFolderPath As String)
+'This query is created and returned as a table in the first sheet in wkb
+
+    Dim wkb As Workbook
+    Dim sQueryText As String
+    Dim sFilePath As String
+    Dim sTableSourceString As String
+    Dim lo As ListObject
+    Const sQueryName As String = "MetadataWorksheets"
+    
+    
+    Set wkb = sht.Parent
+    sht.Name = "WorksheetMetaData"
+    sFilePath = sFolderPath & Application.PathSeparator & "MetadataWorksheets.txt"
+    
+    'Create the Power Query
+    sQueryText = _
+        "let" & vbCr & _
+        "    Source = Csv.Document(File.Contents(""" & _
+        sFilePath & """" & _
+        "),[Delimiter=""|"", Encoding=1252, QuoteStyle=QuoteStyle.None])," & vbCr & _
+        "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
+        "in " & vbCr & _
+        "   PromotedHeaders"
+    wkb.Queries.Add sQueryName, sQueryText
+    
+    'Output the Power Query to a worksheet table
+    Set lo = sht.ListObjects.Add( _
+        SourceType:=0, _
+        Source:="OLEDB;Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=" & sQueryName & ";Extended Properties=""""", _
+        Destination:=Range("$A$1"))
+        
+    lo.Name = "tbl_WorksheetMetadata"
+    
+    With lo.QueryTable
+        .CommandType = xlCmdSql
+        .CommandText = Array("SELECT * FROM [" & sQueryName & "]")
+        .Refresh BackgroundQuery:=False
+    End With
+    
+    
+        
+End Sub
 
 
 '-------------------------------------------------------------------------------------------------------------------

@@ -23,7 +23,10 @@ Option Explicit
 Sub GenerateSpreadsheet()
 
     Dim sFolderPath As String
+    Dim sFilePath As String
     Dim wkb As Workbook
+    Dim sQueryText As String
+    Dim sht As Worksheet
     
     'Setup
     Application.ScreenUpdating = False
@@ -31,7 +34,6 @@ Sub GenerateSpreadsheet()
     Application.Calculation = xlCalculationManual
     Application.DisplayAlerts = False
     
-           
     'Get folder containing metadata
     sFolderPath = GetFolder
     If sFolderPath = "" Then
@@ -45,8 +47,53 @@ Sub GenerateSpreadsheet()
     Loop
     
     
-    CreateWorksheetMedataPowerQuery wkb.Sheets(1), sFolderPath
-    InsertIndexPage ActiveWorkbook
+    'Generate temp sheet containing metadata for worksheets
+    Set sht = wkb.Sheets(1)
+    sht.Name = "Temp_WorksheetMetadata"
+    sFilePath = sFolderPath & Application.PathSeparator & "MetadataWorksheets.txt"
+    sQueryText = _
+        "let" & vbCr & _
+        "    Source = Csv.Document(File.Contents(""" & _
+        sFilePath & """" & _
+        "),[Delimiter=""|"", Encoding=1252, QuoteStyle=QuoteStyle.None])," & vbCr & _
+        "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
+        "in " & vbCr & _
+        "   PromotedHeaders"
+    CreateWorksheetPowerQuery sht, "qry_TempMetadataWorksheets", sQueryText, "tbl_WorksheetMetadata"
+    
+    'Generate temp sheet containing metadata for list object fields
+    Set sht = wkb.Sheets.Add
+    sht.Name = "Temp_ListObjectFields"
+    sFilePath = sFolderPath & Application.PathSeparator & "ListObjectFields.txt"
+    sQueryText = _
+        "let" & vbCr & _
+        "    Source = Csv.Document(File.Contents(""" & _
+        sFilePath & """" & _
+        "),[Delimiter=""|"", Encoding=1252, QuoteStyle=QuoteStyle.None])," & vbCr & _
+        "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
+        "in " & vbCr & _
+        "   PromotedHeaders"
+    CreateWorksheetPowerQuery sht, "qry_TempListObjectFields", sQueryText, "tbl_ListObjectFields"
+    
+    
+    'Generate temp sheet containing metadata for list object values
+    Set sht = wkb.Sheets.Add
+    sht.Name = "Temp_ListObjectValues"
+    sFilePath = sFolderPath & Application.PathSeparator & "ListObjectFieldValues.txt"
+    sQueryText = _
+        "let" & vbCr & _
+        "    Source = Csv.Document(File.Contents(""" & _
+        sFilePath & """" & _
+        "),[Delimiter=""|"", Encoding=1252, QuoteStyle=QuoteStyle.None])," & vbCr & _
+        "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
+        "in " & vbCr & _
+        "   PromotedHeaders"
+    CreateWorksheetPowerQuery sht, "qry_TempListObjectValues", sQueryText, "tbl_ListObjectValues"
+    
+    
+    CreateWorksheets wkb
+    
+    'InsertIndexPage ActiveWorkbook
     
         
     'Cleanup
@@ -267,39 +314,27 @@ End Sub
 
 
 
-Private Sub CreateWorksheetMedataPowerQuery(ByVal sht As Worksheet, ByVal sFolderPath As String)
-'This query is created and returned as a table in the first sheet in wkb
 
-    Dim wkb As Workbook
-    Dim sQueryText As String
-    Dim sFilePath As String
-    Dim sTableSourceString As String
+
+
+Private Sub CreateWorksheetPowerQuery( _
+    ByVal sht As Worksheet, _
+    ByVal sQueryName As String, _
+    ByVal sQueryText As String, _
+    ByVal sTableName As String)
+
+    
     Dim lo As ListObject
-    Const sQueryName As String = "MetadataWorksheets"
     
-    
-    Set wkb = sht.Parent
-    sht.Name = "WorksheetMetaData"
-    sFilePath = sFolderPath & Application.PathSeparator & "MetadataWorksheets.txt"
-    
-    'Create the Power Query
-    sQueryText = _
-        "let" & vbCr & _
-        "    Source = Csv.Document(File.Contents(""" & _
-        sFilePath & """" & _
-        "),[Delimiter=""|"", Encoding=1252, QuoteStyle=QuoteStyle.None])," & vbCr & _
-        "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
-        "in " & vbCr & _
-        "   PromotedHeaders"
-    wkb.Queries.Add sQueryName, sQueryText
-    
+    sht.Parent.Queries.Add sQueryName, sQueryText
+        
     'Output the Power Query to a worksheet table
     Set lo = sht.ListObjects.Add( _
         SourceType:=0, _
         Source:="OLEDB;Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=" & sQueryName & ";Extended Properties=""""", _
         Destination:=Range("$A$1"))
         
-    lo.Name = "tbl_WorksheetMetadata"
+    lo.Name = sTableName
     
     With lo.QueryTable
         .CommandType = xlCmdSql
@@ -310,6 +345,88 @@ Private Sub CreateWorksheetMedataPowerQuery(ByVal sht As Worksheet, ByVal sFolde
     
         
 End Sub
+
+
+Sub CreateWorksheets(ByRef wkb As Workbook)
+
+    Dim i As Long
+    Dim loSheetMetadata As ListObject
+    Dim lo As ListObject
+    Dim sht As Worksheet
+    Dim rngForTable As Range
+    
+    Set loSheetMetadata = wkb.Sheets("Temp_WorksheetMetadata").ListObjects("tbl_WorksheetMetadata")
+    
+    With loSheetMetadata
+        For i = 1 To .DataBodyRange.Rows.Count
+            Set sht = wkb.Sheets.Add(After:=wkb.Sheets(wkb.Sheets.Count))
+            FormatSheet sht
+            sht.Name = .ListColumns("Name").DataBodyRange.Cells(i)
+            sht.Names("SheetCategory").RefersToRange = .ListColumns("Sheet Category").DataBodyRange.Cells(i)
+            sht.Names("SheetHeading").RefersToRange = .ListColumns("Sheet Header").DataBodyRange.Cells(i)
+            
+            If .ListColumns("Table Name").DataBodyRange.Cells(i) <> "" Then
+                Set rngForTable = sht.Range(.ListColumns("Table top left cell").DataBodyRange.Cells(i))
+                Set rngForTable = rngForTable.Resize(2, .ListColumns("Number Of Table Columns").DataBodyRange.Cells(i))
+                Set lo = sht.ListObjects.Add(SourceType:=xlSrcRange, Source:=rngForTable)
+            End If
+            
+        Next i
+    End With
+
+
+
+
+End Sub
+
+
+
+Sub FormatTable(lo As ListObject)
+
+    Dim sty As TableStyle
+    Dim wkb As Workbook
+    
+    Set wkb = lo.Parent.Parent
+    
+    On Error Resume Next
+    wkb.TableStyles.Add ("SpreadsheetBiStyle")
+    On Error GoTo 0
+    Set sty = wkb.TableStyles("SpreadsheetBiStyle")
+    
+    'Set Header Format
+    With sty.TableStyleElements(xlHeaderRow)
+        .Interior.Color = RGB(68, 114, 196)
+        .Font.Color = RGB(255, 255, 255)
+        .Font.Bold = True
+        .Borders.Item(xlEdgeTop).LineStyle = xlSolid
+        .Borders.Item(xlEdgeTop).Weight = xlMedium
+        .Borders.Item(xlEdgeBottom).LineStyle = xlSolid
+        .Borders.Item(xlEdgeBottom).Weight = xlMedium
+    End With
+
+    'Set row stripe format
+    sty.TableStyleElements(xlRowStripe1).Interior.Color = RGB(217, 217, 217)
+    sty.TableStyleElements(xlRowStripe2).Interior.Color = RGB(255, 255, 255)
+    
+    'Set whole table bottom edge format
+    sty.TableStyleElements(xlWholeTable).Borders.Item(xlEdgeBottom).LineStyle = xlSolid
+    sty.TableStyleElements(xlWholeTable).Borders.Item(xlEdgeBottom).Weight = xlMedium
+
+    
+    'Apply custom style and set other attributes
+    lo.TableStyle = "SpreadsheetBiStyle"
+    With lo.HeaderRowRange
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlTop
+        .WrapText = True
+        .Orientation = 0
+    End With
+    
+    lo.DataBodyRange.EntireColumn.AutoFit
+
+
+End Sub
+
 
 
 '-------------------------------------------------------------------------------------------------------------------

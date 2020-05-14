@@ -367,7 +367,7 @@ Sub CreateWorksheets(ByRef wkb As Workbook)
             
             If .ListColumns("Table Name").DataBodyRange.Cells(i) <> "" Then
                 Set rngForTable = sht.Range(.ListColumns("Table top left cell").DataBodyRange.Cells(i))
-                Set rngForTable = rngForTable.Resize(2, .ListColumns("Number Of Table Columns").DataBodyRange.Cells(i))
+                Set rngForTable = rngForTable.Resize(.ListColumns("Number Of Table Rows").DataBodyRange.Cells(i), .ListColumns("Number Of Table Columns").DataBodyRange.Cells(i))
                 Set lo = sht.ListObjects.Add(SourceType:=xlSrcRange, Source:=rngForTable)
             End If
             
@@ -379,6 +379,17 @@ Sub CreateWorksheets(ByRef wkb As Workbook)
 
 End Sub
 
+
+Sub PopulateListObjectValues(ByRef wkb As Workbook)
+
+    Dim loListObjValues As ListObject
+    Dim i As Long
+
+    Set loListObjValues = wkb.Sheets("Temp_ListObjectValues").ListObject("tbl_ListObjectValues")
+
+
+
+End Sub
 
 
 Sub FormatTable(lo As ListObject)

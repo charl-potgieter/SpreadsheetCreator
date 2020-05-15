@@ -1,8 +1,8 @@
-Add listobject values to each listobject
-
-Add list object formulas to each list
+Test the output generation (from Spreadhsheet BI) of listobjects with formulas
 
 Format Tables onces all values and formulas have been populated (don't want to do this earlier as the format also sets column width)
+
+Format colours and numbers based on original table --> need to add code to spreadsheet BI
 
 Freeze panes below headers of each table
 

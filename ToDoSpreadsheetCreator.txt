@@ -1,13 +1,1 @@
-Test the output generation (from Spreadhsheet BI) of listobjects with formulas
-
-Format Tables onces all values and formulas have been populated (don't want to do this earlier as the format also sets column width)
-
-Format colours and numbers based on original table --> need to add code to spreadsheet BI
-
-Freeze panes below headers of each table
-
-Add index sheet
-
-Delete all temp sheets containing metadata when all subs have been run
-
 Delete all temp queries when all subs have been run

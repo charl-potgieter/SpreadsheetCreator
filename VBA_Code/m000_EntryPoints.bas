@@ -27,6 +27,8 @@ Sub GenerateSpreadsheet()
     Dim wkb As Workbook
     Dim sQueryText As String
     Dim sht As Worksheet
+    Dim lo As ListObject
+    Dim cn As WorkbookConnection
     
     'Setup
     Application.ScreenUpdating = False
@@ -59,7 +61,7 @@ Sub GenerateSpreadsheet()
         "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
         "in " & vbCr & _
         "   PromotedHeaders"
-    CreateWorksheetPowerQuery sht, "qry_TempMetadataWorksheets", sQueryText, "tbl_WorksheetMetadata"
+    CreatePowerQuery sht, "qry_TempMetadataWorksheets", sQueryText, "tbl_WorksheetMetadata"
     
     'Generate temp sheet containing metadata for list object fields
     Set sht = wkb.Sheets.Add
@@ -73,7 +75,7 @@ Sub GenerateSpreadsheet()
         "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
         "in " & vbCr & _
         "   PromotedHeaders"
-    CreateWorksheetPowerQuery sht, "qry_TempListObjectFields", sQueryText, "tbl_ListObjectFields"
+    CreatePowerQuery sht, "qry_TempListObjectFields", sQueryText, "tbl_ListObjectFields"
     
     
     'Generate temp sheet containing metadata for list object values
@@ -88,18 +90,60 @@ Sub GenerateSpreadsheet()
         "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
         "in " & vbCr & _
         "   PromotedHeaders"
-    CreateWorksheetPowerQuery sht, "qry_TempListObjectValues", sQueryText, "tbl_ListObjectValues"
+    CreatePowerQuery sht, "qry_TempListObjectValues", sQueryText, "tbl_ListObjectValues"
+    
+    
+    'Generate temp sheet containing metadata for list object format
+    Set sht = wkb.Sheets.Add
+    sht.Name = "Temp_ListObjectFormats"
+    sFilePath = sFolderPath & Application.PathSeparator & "ListObjectFormat.txt"
+    sQueryText = _
+        "let" & vbCr & _
+        "    Source = Csv.Document(File.Contents(""" & _
+        sFilePath & """" & _
+        "),[Delimiter=""|"", Encoding=1252, QuoteStyle=QuoteStyle.None])," & vbCr & _
+        "   PromotedHeaders = Table.PromoteHeaders(Source, [PromoteAllScalars=true])" & _
+        "in " & vbCr & _
+        "   PromotedHeaders"
+    CreatePowerQuery sht, "qry_TempListObjectFormats", sQueryText, "tbl_ListObjectFormats"
     
     
     CreateWorksheets wkb
     PopulateListFieldNamesAndFormulas wkb
     PopulateListObjectValues wkb
-    FormatListObjects wkb
+    SetListObjectFormats wkb
+        
+    
+    'Delete temp sheets
+    wkb.Sheets("Temp_ListObjectFormats").Delete
+    wkb.Sheets("Temp_ListObjectValues").Delete
+    wkb.Sheets("Temp_ListObjectFields").Delete
+    wkb.Sheets("Temp_WorksheetMetadata").Delete
+    
+    'Delete temp queries
+    wkb.Queries("qry_TempListObjectFormats").Delete
+    wkb.Queries("qry_TempListObjectValues").Delete
+    wkb.Queries("qry_TempListObjectFields").Delete
+    wkb.Queries("qry_TempMetadataWorksheets").Delete
+    
+    'Delete any worbook connection (seems like one is created for each of the temp queries)
+    For Each cn In wkb.Connections
+        cn.Delete
+    Next cn
     
     
+    'Set table styles and Freeze panes
+    For Each sht In wkb.Sheets
+        sht.Select
+        For Each lo In sht.ListObjects
+            sht.Rows(lo.DataBodyRange.Cells(1).Row).Select
+            ActiveWindow.FreezePanes = True
+            lo.DataBodyRange.Cells(1).Select
+            FormatTable lo
+        Next lo
+    Next sht
     
-    
-    'InsertIndexPage ActiveWorkbook
+    InsertIndexPage ActiveWorkbook
     
         
     'Cleanup
@@ -323,7 +367,7 @@ End Sub
 
 
 
-Private Sub CreateWorksheetPowerQuery( _
+Private Sub CreatePowerQuery( _
     ByVal sht As Worksheet, _
     ByVal sQueryName As String, _
     ByVal sQueryText As String, _
@@ -373,7 +417,7 @@ Sub CreateWorksheets(ByRef wkb As Workbook)
             
             If .ListColumns("Table Name").DataBodyRange.Cells(i) <> "" Then
                 Set rngForTable = sht.Range(.ListColumns("Table top left cell").DataBodyRange.Cells(i))
-                Set rngForTable = rngForTable.Resize(.ListColumns("Number Of Table Rows").DataBodyRange.Cells(i), .ListColumns("Number Of Table Columns").DataBodyRange.Cells(i))
+                Set rngForTable = rngForTable.Resize(.ListColumns("Number Of Table Rows").DataBodyRange.Cells(i) - 1, .ListColumns("Number Of Table Columns").DataBodyRange.Cells(i))
                 Set lo = sht.ListObjects.Add(SourceType:=xlSrcRange, Source:=rngForTable)
                 lo.Name = .ListColumns("Table Name").DataBodyRange.Cells(i)
             End If
@@ -453,7 +497,7 @@ Sub PopulateListObjectValues(ByRef wkb As Workbook)
     Set loListObjValues = wkb.Sheets("Temp_ListObjectValues").ListObjects("tbl_ListObjectValues")
 
     With loListObjValues
-        For i = 1 To loListObjValues.DataBodyRange.Rows.Count
+        For i = 1 To .DataBodyRange.Rows.Count
             
             sTargetSheetName = .ListColumns("SheetName").DataBodyRange.Cells(i)
             sTargetListObjName = .ListColumns("ListObjectName").DataBodyRange.Cells(i)
@@ -472,6 +516,39 @@ Sub PopulateListObjectValues(ByRef wkb As Workbook)
             
             wkb.Sheets(sTargetSheetName).ListObjects(sTargetListObjName).ListColumns(sTargetListColName).DataBodyRange.Cells(j) = vTargetValue
             
+            
+        Next i
+    End With
+
+
+
+End Sub
+
+
+Sub SetListObjectFormats(ByRef wkb As Workbook)
+
+    Dim loListObjFormats As ListObject
+    Dim i As Long
+    Dim sTargetSheetName As String
+    Dim sTargetListObjName As String
+    Dim sTargetListColName As String
+    Dim sNumberFormat As String
+    Dim lFontColour As Long
+    
+    
+    Set loListObjFormats = wkb.Sheets("Temp_ListObjectFormats").ListObjects("tbl_ListObjectFormats")
+
+    With loListObjFormats
+        For i = 1 To .DataBodyRange.Rows.Count
+            
+            sTargetSheetName = .ListColumns("SheetName").DataBodyRange.Cells(i)
+            sTargetListObjName = .ListColumns("ListObjectName").DataBodyRange.Cells(i)
+            sTargetListColName = .ListColumns("ListObjectHeader").DataBodyRange.Cells(i)
+            sNumberFormat = .ListColumns("NumberFormat").DataBodyRange.Cells(i)
+            lFontColour = .ListColumns("FontColour").DataBodyRange.Cells(i)
+            
+            wkb.Sheets(sTargetSheetName).ListObjects(sTargetListObjName).ListColumns(sTargetListColName).DataBodyRange.NumberFormat = sNumberFormat
+            wkb.Sheets(sTargetSheetName).ListObjects(sTargetListObjName).ListColumns(sTargetListColName).DataBodyRange.Font.Color = lFontColour
             
         Next i
     End With

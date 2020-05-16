@@ -1,1 +1,9 @@
-Delete all temp queries when all subs have been run
+Fails on import if no listobjects in metadata (headings only exist in folder)
+
+Import power queries
+
+Add a readme
+
+Improve code comments
+
+Add a release

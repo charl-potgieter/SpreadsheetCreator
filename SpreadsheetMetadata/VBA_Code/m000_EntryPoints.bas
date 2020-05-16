@@ -52,7 +52,9 @@ Sub GenerateSpreadsheet()
     'Generate temp sheet containing metadata for worksheets
     Set sht = wkb.Sheets(1)
     sht.Name = "Temp_WorksheetMetadata"
-    sFilePath = sFolderPath & Application.PathSeparator & "MetadataWorksheets.txt"
+    sFilePath = sFolderPath & Application.PathSeparator & _
+        "WorksheetStructure" & Application.PathSeparator & "MetadataWorksheets.txt"
+        
     sQueryText = _
         "let" & vbCr & _
         "    Source = Csv.Document(File.Contents(""" & _
@@ -66,7 +68,9 @@ Sub GenerateSpreadsheet()
     'Generate temp sheet containing metadata for list object fields
     Set sht = wkb.Sheets.Add
     sht.Name = "Temp_ListObjectFields"
-    sFilePath = sFolderPath & Application.PathSeparator & "ListObjectFields.txt"
+    sFilePath = sFolderPath & Application.PathSeparator & _
+        "WorksheetStructure" & Application.PathSeparator & "ListObjectFields.txt"
+    
     sQueryText = _
         "let" & vbCr & _
         "    Source = Csv.Document(File.Contents(""" & _
@@ -81,7 +85,9 @@ Sub GenerateSpreadsheet()
     'Generate temp sheet containing metadata for list object values
     Set sht = wkb.Sheets.Add
     sht.Name = "Temp_ListObjectValues"
-    sFilePath = sFolderPath & Application.PathSeparator & "ListObjectFieldValues.txt"
+    sFilePath = sFolderPath & Application.PathSeparator & _
+        "WorksheetStructure" & Application.PathSeparator & "ListObjectFieldValues.txt"
+    
     sQueryText = _
         "let" & vbCr & _
         "    Source = Csv.Document(File.Contents(""" & _
@@ -96,7 +102,9 @@ Sub GenerateSpreadsheet()
     'Generate temp sheet containing metadata for list object format
     Set sht = wkb.Sheets.Add
     sht.Name = "Temp_ListObjectFormats"
-    sFilePath = sFolderPath & Application.PathSeparator & "ListObjectFormat.txt"
+    sFilePath = sFolderPath & Application.PathSeparator & _
+        "WorksheetStructure" & Application.PathSeparator & "ListObjectFormat.txt"
+    
     sQueryText = _
         "let" & vbCr & _
         "    Source = Csv.Document(File.Contents(""" & _

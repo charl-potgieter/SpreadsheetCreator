@@ -151,7 +151,16 @@ Sub GenerateSpreadsheet()
         Next lo
     Next sht
     
-    InsertIndexPage ActiveWorkbook
+    'Import power queries
+    ImportPowerQueriesInFolder sFolderPath & Application.PathSeparator & "PowerQueries", True
+    
+    'Import VBA code
+    ImportVBAModules wkb, sFolderPath & Application.PathSeparator & "VBA_Code"
+    
+    'Create index tab only if more than one sheet exists in wkb
+    If wkb.Sheets.Count > 1 Then
+        InsertIndexPage wkb
+    End If
     
         
     'Cleanup
@@ -161,68 +170,6 @@ Sub GenerateSpreadsheet()
     Application.DisplayAlerts = True
     
 
-End Sub
-
-
-Public Sub ExportVBAModules()
-'Saves active workbook and exports file to VBA_Code subfolder in path of active workbook
-' *****IMPORTANT NOTE****
-' Any existing files in this subfolder will be deleted
-
-    Dim sExportPath As String
-    Dim sExportFileName As String
-    Dim bExport As Boolean
-    Dim sFileName As String
-    Dim cmpComponent As VBIDE.VBComponent
-
-    
-    'ActiveWorkbook.Save
-    sExportPath = ActiveWorkbook.Path & Application.PathSeparator & "VBA_Code"
-    
-    If NumberOfFilesInFolder(sExportPath) <> 0 Then
-        MsgBox ("Please ensure VBA subfolder is empty ...exiting")
-        Exit Sub
-    End If
-
-    
-    
-    On Error Resume Next
-        MkDir sExportPath
-        Kill sExportPath & "\*.*"
-    On Error GoTo 0
-
-    If ActiveWorkbook.VBProject.Protection = 1 Then
-        MsgBox "The VBA in this workbook is protected," & _
-            "not possible to export the code"
-        Exit Sub
-    End If
-    
-    For Each cmpComponent In ThisWorkbook.VBProject.VBComponents
-        
-        bExport = True
-        sFileName = cmpComponent.Name
-
-        'Set filename
-        Select Case cmpComponent.Type
-            Case vbext_ct_ClassModule
-                sFileName = cmpComponent.Name & ".cls"
-            Case vbext_ct_MSForm
-                sFileName = cmpComponent.Name & ".frm"
-            Case vbext_ct_StdModule
-                sFileName = cmpComponent.Name & ".bas"
-            Case vbext_ct_Document
-                ' This is a worksheet or workbook object - don't export.
-                bExport = False
-        End Select
-        
-        If bExport Then
-            sExportFileName = sExportPath & Application.PathSeparator & sFileName
-            cmpComponent.Export sExportFileName
-        End If
-   
-    Next cmpComponent
-
-    MsgBox "Code export complete"
 End Sub
 
 
@@ -404,6 +351,36 @@ Private Sub CreatePowerQuery( _
         
 End Sub
 
+Sub ImportSinglePowerQuery(ByVal sQueryPath As String, ByVal sQueryName As String, wkb As Workbook)
+
+    Dim sQueryText As String
+    
+    sQueryText = ReadTextFileIntoString(sQueryPath)
+    wkb.Queries.Add sQueryName, sQueryText
+
+End Sub
+
+
+
+Sub ImportPowerQueriesInFolder(ByVal sFolderPath As String, ByVal bRecursive As Boolean)
+'Reference: Microsoft Scripting Runtime
+    
+    Dim FileItems() As Scripting.File
+    Dim FileItem
+    Dim sQueryName As String
+    
+    FileItemsInFolder sFolderPath, bRecursive, FileItems
+    
+    For Each FileItem In FileItems
+        sQueryName = Left(FileItem.Name, Len(FileItem.Name) - 2)
+        ImportSinglePowerQuery FileItem.Path, sQueryName, ActiveWorkbook
+    Next FileItem
+
+
+End Sub
+
+
+
 
 Sub CreateWorksheets(ByRef wkb As Workbook)
 
@@ -452,6 +429,12 @@ Sub PopulateListFieldNamesAndFormulas(ByRef wkb As Workbook)
     Dim sFormula As String
 
     Set loFieldDetails = wkb.Sheets("Temp_ListObjectFields").ListObjects("tbl_ListObjectFields")
+    
+    'No ListObject field details.  Noting to do.  Sub exited to prevent error
+    'caused by referencing the list databodyrange
+    If loFieldDetails.DataBodyRange Is Nothing Then
+        Exit Sub
+    End If
     
     
     With loFieldDetails
@@ -504,6 +487,13 @@ Sub PopulateListObjectValues(ByRef wkb As Workbook)
     
     Set loListObjValues = wkb.Sheets("Temp_ListObjectValues").ListObjects("tbl_ListObjectValues")
 
+    'No ListObject field details.  Noting to do.  Sub exited to prevent error
+    'caused by referencing the list databodyrange
+    If loListObjValues.DataBodyRange Is Nothing Then
+        Exit Sub
+    End If
+
+
     With loListObjValues
         For i = 1 To .DataBodyRange.Rows.Count
             
@@ -545,6 +535,12 @@ Sub SetListObjectFormats(ByRef wkb As Workbook)
     
     
     Set loListObjFormats = wkb.Sheets("Temp_ListObjectFormats").ListObjects("tbl_ListObjectFormats")
+
+    'No ListObject field details.  Noting to do.  Sub exited to prevent error
+    'caused by referencing the list databodyrange
+    If loListObjFormats.DataBodyRange Is Nothing Then
+        Exit Sub
+    End If
 
     With loListObjFormats
         For i = 1 To .DataBodyRange.Rows.Count
@@ -613,6 +609,63 @@ Sub FormatTable(lo As ListObject)
 End Sub
 
 
+Function ArrayIsDimensioned(Arr As Variant) As Boolean
+
+    Dim b As Boolean
+    
+    On Error Resume Next
+    ArrayIsDimensioned = (UBound(Arr, 1)) >= 0 And UBound(Arr) >= LBound(Arr)
+    If Err.Number <> 0 Then ArrayIsDimensioned = False
+
+End Function
+
+
+Public Sub ImportVBAModules(ByRef wkb As Workbook, ByVal sFolder As String)
+'Imports VBA code sFolder
+
+
+    Dim objFSO As Scripting.FileSystemObject
+    Dim objFile As Scripting.File
+    Dim sTargetWorkbook As String
+    Dim sImportPath As String
+    Dim zFileName As String
+    Dim cmpComponents As VBIDE.VBComponents
+
+    If wkb.Name = ThisWorkbook.Name Then
+        MsgBox "Select another destination workbook" & _
+        "Not possible to import in this workbook "
+        Exit Sub
+    End If
+    
+    If wkb.VBProject.Protection = 1 Then
+    MsgBox "The VBA in this workbook is protected," & _
+        "not possible to Import the code"
+    Exit Sub
+    End If
+
+        
+    Set objFSO = New Scripting.FileSystemObject
+    If objFSO.GetFolder(sFolder).Files.Count = 0 Then
+       MsgBox "There are no files to import"
+       Exit Sub
+    End If
+
+
+    Set cmpComponents = wkb.VBProject.VBComponents
+    
+    For Each objFile In objFSO.GetFolder(sFolder).Files
+    
+        If (objFSO.GetExtensionName(objFile.Name) = "cls") Or _
+            (objFSO.GetExtensionName(objFile.Name) = "frm") Or _
+            (objFSO.GetExtensionName(objFile.Name) = "bas") Then
+            cmpComponents.Import objFile.Path
+        End If
+        
+    Next objFile
+    
+End Sub
+
+
 
 '-------------------------------------------------------------------------------------------------------------------
 '       File utilities
@@ -658,3 +711,60 @@ Function NumberOfFilesInFolder(ByVal sFolderPath As String) As Integer
 
 End Function
 
+
+
+Sub FileItemsInFolder(ByVal sFolderPath As String, ByVal bRecursive As Boolean, ByRef FileItems() As Scripting.File)
+'Requires refence: Microsoft Scripting Runtime
+'Returns an array of files (which can be used to get filename, path etc)
+'(Cannot create function due to recursive nature of the code)
+
+    
+    Dim FSO As Scripting.FileSystemObject
+    Dim SourceFolder As Scripting.Folder
+    Dim SubFolder As Scripting.Folder
+    Dim FileItem As Scripting.File
+    
+    Set FSO = New Scripting.FileSystemObject
+    Set SourceFolder = FSO.GetFolder(sFolderPath)
+    
+    For Each FileItem In SourceFolder.Files
+    
+        If Not ArrayIsDimensioned(FileItems) Then
+            ReDim FileItems(0)
+        Else
+            ReDim Preserve FileItems(UBound(FileItems) + 1)
+        End If
+        
+        Set FileItems(UBound(FileItems)) = FileItem
+        
+    Next FileItem
+    
+    If bRecursive Then
+        For Each SubFolder In SourceFolder.SubFolders
+            FileItemsInFolder SubFolder.Path, True, FileItems
+        Next SubFolder
+    End If
+    
+    Set FileItem = Nothing
+    Set SourceFolder = Nothing
+    Set FSO = Nothing
+    
+
+End Sub
+
+
+
+Function ReadTextFileIntoString(sFilePath As String) As String
+'Inspired by:
+'https://analystcave.com/vba-read-file-vba/
+
+    Dim iFileNo As Integer
+    
+    'Get first free file number
+    iFileNo = FreeFile
+
+    Open sFilePath For Input As #iFileNo
+    ReadTextFileIntoString = Input$(LOF(iFileNo), iFileNo)
+    Close #iFileNo
+
+End Function

@@ -1,6 +1,10 @@
-Fails on import if no listobjects in metadata (headings only exist in folder)
+Implement below in spreadsheetBI - see that to do for next steps
+----------------------------------------------------------------
+Delete the below first row in the VBA export to enable simple copy and paste?
+Attribute VB_Name = "m000_EntryPoints"
+https://www.mrexcel.com/board/threads/delete-rows-from-text-file-via-vba.705837/
 
-Import power queries
+
 
 Add a readme
 

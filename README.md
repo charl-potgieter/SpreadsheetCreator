@@ -5,8 +5,18 @@
 
 ## "Installation"
 
-- TBA
- - 'Mention something about download'
+Download Excel file under releases:
+https://github.com/charl-potgieter/SpreadsheetCreator/releases
+
+
+Alternatively:
+- Copy and paste the code per "m000_EntryPoints.bas" into an Excel VBA editor of a new workbook
+- Add references for 
+    - Microsoft scripting runtime
+    - Microsoft Visual Basic For Applications Extensibility 5.3
+-  Run the GenerateSpreadsheet sub
+
+- Code can be tested by running and selecting the ExampleSpreadsheetMetadata folder included in this repository.
 
 
 ## What this code does
@@ -31,19 +41,19 @@ The metadata is saved in pipe delimited text files stored in below Folders:
 
     SpreadsheetMetadata
         |
-        |   ------- PowerQueries (one file per query with .m file extension)
+        |--- PowerQueries (one file per query with .m file extension)
         |
-        |   ------- VBA_Code (one file per VBA module with .bas file extension)
+        |--- VBA_Code (one file per VBA module with .bas file extension)
         |
-        |   ------- WorksheetStructure
+        |--- WorksheetStructure
                 |
-                |   ------- ListObjectFields.txt
+                |--- ListObjectFields.txt
                 |
-                |   ------- ListObjectFieldValues.txt
+                |--- ListObjectFieldValues.txt
                 |
-                |   ------- ListObjectFormat.txt
+                |--- ListObjectFormat.txt
                 |
-                |   ------- MetadataWorksheets.txt
+                |--- MetadataWorksheets.txt
 
 
 ## File structure
@@ -78,6 +88,10 @@ The files under WorksheetStructure folder above are pipe delimited text files
 - Number Of Table Columns
 - Number of Table Rows
 - Table top left cell
+
+
+## Generating spreadsheet metadata for use with this code
+Refer https://github.com/charl-potgieter/SpreadsheetBI
 
  ## License
 

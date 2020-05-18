@@ -11,11 +11,6 @@ Option Explicit
 '
 '
 '   All workings contained in one module to enable easy copy and paste setup
-'
-'
-
-
-
 
 
 
@@ -25,6 +20,8 @@ Option Explicit
 
 
 Sub GenerateSpreadsheet()
+'Generates spreadsheet from metadata stored in text files in selected folder
+
 
     Dim sFolderPath As String
     Dim sFilePath As String
@@ -238,6 +235,7 @@ End Sub
 
 
 Private Sub InsertIndexPage(ByRef wkb As Workbook)
+'Inserts index page with hyperlinks to subsequent sheets
 
     Dim sht As Worksheet
     Dim shtIndex As Worksheet
@@ -324,15 +322,15 @@ End Sub
 
 
 
-
-
 Private Sub CreatePowerQuery( _
     ByVal sht As Worksheet, _
     ByVal sQueryName As String, _
     ByVal sQueryText As String, _
     ByVal sTableName As String)
 
+'Creates power query and loads as a table on sht
     
+        
     Dim lo As ListObject
     
     sht.Parent.Queries.Add sQueryName, sQueryText
@@ -387,6 +385,8 @@ End Sub
 
 
 Private Sub CreateWorksheets(ByRef wkb As Workbook)
+'Creates worksheets based on data stored in the listobject on the Temp_WorksheetMetadata tab of wkb workkbook
+
 
     Dim i As Long
     Dim loSheetMetadata As ListObject
@@ -421,6 +421,8 @@ End Sub
 
 
 Private Sub PopulateListFieldNamesAndFormulas(ByRef wkb As Workbook)
+'Records listobject field names and formulas in wkb based on metadata stored in
+'wkb.Sheets("Temp_ListObjectFields").ListObjects("tbl_ListObjectFields")
 
     Dim loFieldDetails As ListObject
     Dim loTargetListObj As ListObject
@@ -479,6 +481,9 @@ End Sub
 
 
 Private Sub PopulateListObjectValues(ByRef wkb As Workbook)
+'Populates listobject values in wkb based on values stored in
+'wkb.Sheets("Temp_ListObjectValues").ListObjects("tbl_ListObjectValues")
+
 
     Dim loListObjValues As ListObject
     Dim i As Long
@@ -528,6 +533,8 @@ End Sub
 
 
 Private Sub SetListObjectFormats(ByRef wkb As Workbook)
+'Sets font colour and number format of listobject columns in wkb based on metadata in
+'wkb.Sheets("Temp_ListObjectFormats").ListObjects("tbl_ListObjectFormats")
 
     Dim loListObjFormats As ListObject
     Dim i As Long
@@ -567,6 +574,7 @@ End Sub
 
 
 Private Sub FormatTable(lo As ListObject)
+'Applies preferred listobject formatting
 
     Dim sty As TableStyle
     Dim wkb As Workbook

@@ -19,9 +19,9 @@ Alternatively:
 - Code can be tested by running and selecting the ExampleSpreadsheetMetadata folder included in this repository.
 
 
-## What this code does
+## About this code
 
-- Creates an Excel spreadsheet from metada saved in text files
+- Creates an Excel spreadsheet from metadata saved in text files
 
 - Below code can be copied and pasted into the Excel VBA editor in a  temporary spreadsheet and then run to create the target spreadsheet
 

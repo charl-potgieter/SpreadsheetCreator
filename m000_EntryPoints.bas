@@ -1,4 +1,3 @@
-Attribute VB_Name = "m000_EntryPoints"
 Option Explicit
 
 '-------------------------------------------------------------------------------------------------------------------
@@ -12,6 +11,11 @@ Option Explicit
 '
 '
 '   All workings contained in one module to enable easy copy and paste setup
+'
+'
+
+
+
 
 
 
@@ -351,7 +355,7 @@ Private Sub CreatePowerQuery( _
         
 End Sub
 
-Sub ImportSinglePowerQuery(ByVal sQueryPath As String, ByVal sQueryName As String, wkb As Workbook)
+Private Sub ImportSinglePowerQuery(ByVal sQueryPath As String, ByVal sQueryName As String, wkb As Workbook)
 
     Dim sQueryText As String
     
@@ -362,7 +366,7 @@ End Sub
 
 
 
-Sub ImportPowerQueriesInFolder(ByVal sFolderPath As String, ByVal bRecursive As Boolean)
+Private Sub ImportPowerQueriesInFolder(ByVal sFolderPath As String, ByVal bRecursive As Boolean)
 'Reference: Microsoft Scripting Runtime
     
     Dim FileItems() As Scripting.File
@@ -382,7 +386,7 @@ End Sub
 
 
 
-Sub CreateWorksheets(ByRef wkb As Workbook)
+Private Sub CreateWorksheets(ByRef wkb As Workbook)
 
     Dim i As Long
     Dim loSheetMetadata As ListObject
@@ -416,7 +420,7 @@ Sub CreateWorksheets(ByRef wkb As Workbook)
 End Sub
 
 
-Sub PopulateListFieldNamesAndFormulas(ByRef wkb As Workbook)
+Private Sub PopulateListFieldNamesAndFormulas(ByRef wkb As Workbook)
 
     Dim loFieldDetails As ListObject
     Dim loTargetListObj As ListObject
@@ -474,7 +478,7 @@ End Sub
 
 
 
-Sub PopulateListObjectValues(ByRef wkb As Workbook)
+Private Sub PopulateListObjectValues(ByRef wkb As Workbook)
 
     Dim loListObjValues As ListObject
     Dim i As Long
@@ -523,7 +527,7 @@ Sub PopulateListObjectValues(ByRef wkb As Workbook)
 End Sub
 
 
-Sub SetListObjectFormats(ByRef wkb As Workbook)
+Private Sub SetListObjectFormats(ByRef wkb As Workbook)
 
     Dim loListObjFormats As ListObject
     Dim i As Long
@@ -562,7 +566,7 @@ Sub SetListObjectFormats(ByRef wkb As Workbook)
 End Sub
 
 
-Sub FormatTable(lo As ListObject)
+Private Sub FormatTable(lo As ListObject)
 
     Dim sty As TableStyle
     Dim wkb As Workbook
@@ -609,7 +613,7 @@ Sub FormatTable(lo As ListObject)
 End Sub
 
 
-Function ArrayIsDimensioned(Arr As Variant) As Boolean
+Private Function ArrayIsDimensioned(Arr As Variant) As Boolean
 
     Dim b As Boolean
     
@@ -620,7 +624,7 @@ Function ArrayIsDimensioned(Arr As Variant) As Boolean
 End Function
 
 
-Public Sub ImportVBAModules(ByRef wkb As Workbook, ByVal sFolder As String)
+Private Sub ImportVBAModules(ByRef wkb As Workbook, ByVal sFolder As String)
 'Imports VBA code sFolder
 
 
@@ -696,7 +700,7 @@ End Function
 
 
 
-Function NumberOfFilesInFolder(ByVal sFolderPath As String) As Integer
+Private Function NumberOfFilesInFolder(ByVal sFolderPath As String) As Integer
 'Requires refence: Microsoft Scripting Runtime
 'This is non-recursive
 
@@ -713,7 +717,7 @@ End Function
 
 
 
-Sub FileItemsInFolder(ByVal sFolderPath As String, ByVal bRecursive As Boolean, ByRef FileItems() As Scripting.File)
+Private Sub FileItemsInFolder(ByVal sFolderPath As String, ByVal bRecursive As Boolean, ByRef FileItems() As Scripting.File)
 'Requires refence: Microsoft Scripting Runtime
 'Returns an array of files (which can be used to get filename, path etc)
 '(Cannot create function due to recursive nature of the code)
@@ -754,7 +758,7 @@ End Sub
 
 
 
-Function ReadTextFileIntoString(sFilePath As String) As String
+Private Function ReadTextFileIntoString(sFilePath As String) As String
 'Inspired by:
 'https://analystcave.com/vba-read-file-vba/
 
